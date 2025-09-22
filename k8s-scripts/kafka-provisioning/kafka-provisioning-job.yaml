@@ -1,0 +1,1021 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+  generation: 1
+  labels:
+    app.kubernetes.io/component: kafka-provisioning-%%date%%
+    app.kubernetes.io/instance: sentry
+    app.kubernetes.io/name: kafka
+  name: sentry-kafka-provisioning-%%date%%
+  namespace: sentry
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: kafka-provisioning-%%date%%
+        app.kubernetes.io/instance: sentry
+        app.kubernetes.io/name: kafka
+        batch.kubernetes.io/job-name: sentry-kafka-provisioning-%%date%%
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - -efc
+        - |
+          echo "Configuring environment"
+          . /opt/bitnami/scripts/libkafka.sh
+          export CLIENT_CONF="${CLIENT_CONF:-/tmp/client.properties}"
+          if [ ! -f "$CLIENT_CONF" ]; then
+            touch $CLIENT_CONF
+
+            kafka_common_conf_set "$CLIENT_CONF" security.protocol "PLAINTEXT"
+          fi
+
+          echo "Running pre-provisioning script if any given"
+
+
+
+          kafka_provisioning_commands=(
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic event-replacements"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic cdc"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic transactions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-transactions-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic outcomes"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic outcomes-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic outcomes-billing"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic outcomes-billing-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-spans"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-sessions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-metrics-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-transactions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-generic-metrics-sets"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-generic-metrics-distributions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-generic-metrics-counters"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-generic-metrics-gauges"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic events-subscription-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic transactions-subscription-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic metrics-subscription-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic generic-metrics-subscription-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-queries"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic processed-profiles"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic profiles-call-tree"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-profile-chunks"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config max.message.bytes=15000000 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-replay-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-metrics-sets-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-metrics-distributions-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-metrics-counters-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-metrics-gauges-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic generic-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config cleanup.policy=compact,delete \
+                --config min.compaction.lag.ms=3600000 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-generic-events-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --config message.timestamp.type=LogAppendTime \
+                --command-config ${CLIENT_CONF} \
+                --topic group-attributes"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-generic-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-replays"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-generic-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-querylog"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-dead-letter-group-attributes"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-attachments"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-attachments-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-transactions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-transactions-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-transactions-backlog"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-events-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-replay-recordings"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-metrics-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-performance-metrics"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-feedback-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-feedback-events-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-monitors"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic monitors-clock-tasks"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic monitors-clock-tick"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic monitors-incident-occurrences"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic profiles"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic ingest-occurrences"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-spans"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-eap-spans-commit-log"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic scheduled-subscriptions-eap-spans"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic eap-spans-subscription-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-eap-mutations"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic subscription-results-eap-items"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-lw-deletions-generic-events"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic shared-resources-usage"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-profile-chunks"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic buffered-segments"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic buffered-segments-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic uptime-configs"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic uptime-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-uptime-results"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic task-worker"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-ourlogs"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic snuba-items"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-billing"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-billing-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-control"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-control-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest-errors"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest-errors-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest-transactions"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-ingest-transactions-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-internal"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-internal-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-limited"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-limited-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-long"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-long-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-products"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-products-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-sentryapp"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-sentryapp-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-symbolication"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-symbolication-dlq"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-usage"
+            "/opt/bitnami/kafka/bin/kafka-topics.sh \
+                --create \
+                --if-not-exists \
+                --bootstrap-server ${KAFKA_SERVICE} \
+                --replication-factor 3 \
+                --partitions 3 \
+                --command-config ${CLIENT_CONF} \
+                --topic taskworker-usage-dlq"
+          )
+
+          echo "Starting provisioning"
+          for ((index=0; index < ${#kafka_provisioning_commands[@]}; index+=1))
+          do
+            for j in $(seq ${index} $((${index}+1-1)))
+            do
+                ${kafka_provisioning_commands[j]} & # Async command
+            done
+            wait  # Wait the end of the jobs
+          done
+
+          echo "Running post-provisioning script if any given"
+
+
+
+          echo "Provisioning succeeded"
+        command:
+        - /bin/bash
+        env:
+        - name: BITNAMI_DEBUG
+          value: "false"
+        - name: KAFKA_SERVICE
+          value: sentry-kafka:9092
+        image: docker.io/bitnami/kafka:3.7.1-debian-12-r4
+        imagePullPolicy: IfNotPresent
+        name: kafka-provisioning-%%date%%
+        resources:
+          limits:
+            cpu: 400m
+            memory: 4000Mi
+          requests:
+            cpu: 100m
+            memory: 1500Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+          seLinuxOptions: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - args:
+        - -ec
+        - |
+          wait-for-port \
+            --host=sentry-kafka \
+            --state=inuse \
+            --timeout=120 \
+            9092;
+          echo "Kafka is available";
+        command:
+        - /bin/bash
+        image: docker.io/bitnami/kafka:3.7.1-debian-12-r4
+        imagePullPolicy: IfNotPresent
+        name: wait-for-available-kafka
+        resources:
+          limits:
+            cpu: 400m
+            memory: 4000Mi
+          requests:
+            cpu: 100m
+            memory: 1500Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 1001
+          runAsNonRoot: true
+          runAsUser: 1001
+          seLinuxOptions: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccount: sentry-kafka-provisioning
+      serviceAccountName: sentry-kafka-provisioning
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - emptyDir: {}
+        name: tmp
