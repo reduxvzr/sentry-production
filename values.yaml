@@ -14,7 +14,7 @@ sentry:
 
   user:
     create: true
-    email: "sentry@travelata.ru"
+    email: "sentry@aaawr.com"
     password: "pass1"
     ## set this value to an existingSecret name to create the admin user with the password in the secret
     existingSecret: "sentry-secret"
